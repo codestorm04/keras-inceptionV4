@@ -18,7 +18,8 @@ import inception_v4
 import numpy as np
 import cv2
 import os
-
+import sys
+import train
 
 # If you want to use a GPU set its index here
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
@@ -63,31 +64,47 @@ def central_crop(image, central_fraction):
 
 
 def get_processed_image(img_path):
-	# Load image and convert from BGR to RGB
-	im = np.asarray(cv2.imread(img_path))[:,:,::-1]
-	im = central_crop(im, 0.875)
-	im = cv2.resize(im, (299, 299))
-	im = inception_v4.preprocess_input(im)
-	if K.image_data_format() == "channels_first":
-		im = np.transpose(im, (2,0,1))
-		im = im.reshape(-1,3,299,299)
-	else:
-		im = im.reshape(-1,299,299,3)
-	return im
+        # Load image and convert from BGR to RGB
+        im = cv2.imread(img_path)
+        if im is None:
+            return None
+        im = np.asarray(im)[:,:,::-1]
+        im = central_crop(im, 0.875)
+        im = cv2.resize(im, (299, 299))
+        im = inception_v4.preprocess_input(im)
+        if K.image_data_format() == "channels_first":
+            im = np.transpose(im, (2,0,1))
+        return im
 
 
 if __name__ == "__main__":
 	# Create model and load pre-trained weights
-	model = inception_v4.create_model(weights='imagenet', include_top=True)
+    model = inception_v4.create_model(num_classes=train.nb_classes, include_top=True)
+    model.load_weights(train.weights_file, by_name=True)
 
-	# Open Class labels dictionary. (human readable label given ID)
-	classes = eval(open('validation_utils/class_names.txt', 'r').read())
+    # Load test image!
+    imgs = []
+    x_ids = []
+    y_ids = []
+    if sys.argv[1] != "":
+        img_file = sys.argv[1]
+        with open(img_file, 'r') as id_file:
+            ids = id_file.readlines()
+            for img in ids:
+                x, y = img.strip().split(",")
+                img = get_processed_image(os.path.join(train.image_path_prefix, x[0], x[1], x[2], x + '.jpg'))
+                if img is not None:
+                    imgs.append(img)
+                    y_ids.append(y)
+                    x_ids.append(x)
+    else:
+        raise "specify the test image id file!"
 
-	# Load test image!
-	img_path = 'elephant.jpg'
-	img = get_processed_image(img_path)
+    # Run prediction on test image
+    preds = model.predict(np.asarray(imgs))
 
-	# Run prediction on test image
-	preds = model.predict(img)
-	print("Class is: " + classes[np.argmax(preds)-1])
-	print("Certainty is: " + str(preds[0][np.argmax(preds)]))
+    for idx in range(0, len(imgs)):
+        print("%s\t%s\t%f\t%d\t%f" % (x_ids[idx], y_ids[idx], preds[idx][int(y_ids[idx])], np.argmax(preds[idx]), preds[idx][np.argmax(preds[idx])]))
+    
+#    print("Class is: " + classes[np.argmax(preds)-1])
+#    print("Certainty is: " + str(preds[0][np.argmax(preds)]))

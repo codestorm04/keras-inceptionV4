@@ -239,7 +239,7 @@ def inception_v4_base(input):
     return net
 
 
-def inception_v4(num_classes, dropout_keep_prob, weights, include_top):
+def inception_v4(num_classes, dropout_keep_prob, include_top):
     '''
     Creates the inception v4 network
 
@@ -248,7 +248,7 @@ def inception_v4(num_classes, dropout_keep_prob, weights, include_top):
     	dropout_keep_prob: float, the fraction to keep before final layer.
     
     Returns: 
-    	logits: the logits outputs of the model.
+        logits: the logits outputs of the model.
     '''
 
     # Input Shape is 299 x 299 x 3 (tf) or 3 x 299 x 299 (th)
@@ -273,6 +273,7 @@ def inception_v4(num_classes, dropout_keep_prob, weights, include_top):
     model = Model(inputs, x, name='inception_v4')
 
     # load weights
+    '''
     if weights == 'imagenet':
         if K.image_data_format() == 'channels_first':
             if K.backend() == 'tensorflow':
@@ -297,8 +298,9 @@ def inception_v4(num_classes, dropout_keep_prob, weights, include_top):
                 cache_subdir='models',
                 md5_hash='9296b46b5971573064d12e4669110969')
         model.load_weights(weights_path, by_name=True)
+    '''
     return model
 
 
-def create_model(num_classes=1001, dropout_prob=0.2, weights=None, include_top=True):
-    return inception_v4(num_classes, dropout_prob, weights, include_top)
+def create_model(num_classes=1001, dropout_prob=0.2, include_top=True):
+    return inception_v4(num_classes, dropout_prob, include_top)
